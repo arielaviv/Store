@@ -1,45 +1,92 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Use the credentials stored in Jenkins
+        DOCKERHUB_REPO = 'arielaviv/my-node-app'
+        MONGO_URI = "mongodb+srv://<mongo>:<mongo>@cluster0.fo8vb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                // Cloning the repository
+                // Checkout code from GitHub
                 git url: 'https://github.com/arielaviv/Store.git', branch: 'main'
             }
         }
-        
-        stage('Build') {
+
+        stage('Build Docker Image') {
             steps {
-                // Commands for building the project
-                echo 'Building the project...'
-                // Add build steps here, e.g., running shell commands or scripts
-                // sh 'mvn clean install' or 'npm install'
+                script {
+                    // Build the Docker image using the Dockerfile in the repo
+                    def app = docker.build("${env.DOCKERHUB_REPO}:latest")
+                }
             }
         }
-        
-        stage('Test') {
+
+        stage('Login to Docker Hub') {
             steps {
-                // Commands for testing the project
-                echo 'Running tests...'
-                // Add testing commands here, e.g., for unit or integration testing
-                // sh 'mvn test' or 'npm test'
+                script {
+                    // Login to Docker Hub
+                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
+                        echo 'Logged in to Docker Hub'
+                    }
+                }
             }
         }
-        
-        stage('Deploy') {
+
+        stage('Push Docker Image to Docker Hub') {
             steps {
-                // Commands for deployment
-                echo 'Deploying the project...'
-                // Add deployment commands, e.g., deploying to a server, Kubernetes, etc.
+                script {
+                    // Push the Docker image to Docker Hub
+                    def app = docker.image("${env.DOCKERHUB_REPO}:latest")
+                    app.push()
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Apply the Kubernetes deployment and service YAML files
+                    sh 'kubectl apply -f C:/Users/ariel/Desktop/DevOps/Store/k8s/nodejs-deployment.yml'
+                    sh 'kubectl apply -f C:/Users/ariel/Desktop/DevOps/Store/k8s/nodejs-service.yml'
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    // Check if the deployment succeeded by verifying if pods are running
+                    def deploymentStatus = sh(script: 'kubectl get pods --selector=app=nodejs-app --field-selector=status.phase!=Running', returnStatus: true)
+                    if (deploymentStatus != 0) {
+                        error "Deployment verification failed! Rolling back..."
+                    }
+                }
+            }
+        }
+
+        stage('Rollback') {
+            when {
+                failure() // This stage will only run if there is a failure in the previous stages
+            }
+            steps {
+                script {
+                    // Rollback the Kubernetes deployment to the previous version
+                    sh 'kubectl rollout undo deployment/nodejs-app'
+                    echo "Rolled back to the previous version."
+                }
             }
         }
     }
 
     post {
         always {
-            // Archive build results, clean workspace, notify, etc.
-            echo 'Pipeline finished.'
+            echo 'Pipeline completed'
+        }
+        failure {
+            echo 'Pipeline failed'
         }
     }
 }
