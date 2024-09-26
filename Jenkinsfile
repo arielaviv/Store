@@ -4,50 +4,42 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Pull the latest code from the repository
-                git branch: 'main', url: 'https://github.com/arielaviv/Store.git'
+                // Cloning the repository
+                git url: 'https://github.com/arielaviv/Store.git', branch: 'main'
             }
         }
-
-        stage('Install Dependencies') {
-            steps {
-                // Install dependencies
-                sh 'npm install'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                // Run your unit tests
-                sh 'npm test'
-            }
-        }
-
+        
         stage('Build') {
             steps {
-                // Build the project
-                sh 'npm run build'
+                // Commands for building the project
+                echo 'Building the project...'
+                // Add build steps here, e.g., running shell commands or scripts
+                // sh 'mvn clean install' or 'npm install'
             }
         }
-
+        
+        stage('Test') {
+            steps {
+                // Commands for testing the project
+                echo 'Running tests...'
+                // Add testing commands here, e.g., for unit or integration testing
+                // sh 'mvn test' or 'npm test'
+            }
+        }
+        
         stage('Deploy') {
             steps {
-                // Deploy the application
-                echo 'Deploying the application...'
+                // Commands for deployment
+                echo 'Deploying the project...'
+                // Add deployment commands, e.g., deploying to a server, Kubernetes, etc.
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: '**/build/**', allowEmptyArchive: true
-        }
-        success {
-            echo 'Build and deployment succeeded!'
-        }
-        failure {
-            echo 'Build and deployment failed!'
+            // Archive build results, clean workspace, notify, etc.
+            echo 'Pipeline finished.'
         }
     }
 }
- 
