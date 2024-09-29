@@ -15,6 +15,20 @@ pipeline {
             }
         }
 
+        stage('Install Dependencies') {
+            steps {
+                // Install npm dependencies
+                sh 'npm install'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                // Run the tests
+                sh 'npm test'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 script {
@@ -51,31 +65,6 @@ pipeline {
                     // Apply the Kubernetes deployment and service YAML files
                     sh 'kubectl apply -f C:/Users/ariel/Desktop/DevOps/Store/k8s/nodejs-deployment.yml'
                     sh 'kubectl apply -f C:/Users/ariel/Desktop/DevOps/Store/k8s/nodejs-service.yml'
-                }
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                script {
-                    // Check if the deployment succeeded by verifying if pods are running
-                    def deploymentStatus = sh(script: 'kubectl get pods --selector=app=nodejs-app --field-selector=status.phase!=Running', returnStatus: true)
-                    if (deploymentStatus != 0) {
-                        error "Deployment verification failed! Rolling back..."
-                    }
-                }
-            }
-        }
-
-        stage('Rollback') {
-            when {
-                failure() // This stage will only run if there is a failure in the previous stages
-            }
-            steps {
-                script {
-                    // Rollback the Kubernetes deployment to the previous version
-                    sh 'kubectl rollout undo deployment/nodejs-app'
-                    echo "Rolled back to the previous version."
                 }
             }
         }
