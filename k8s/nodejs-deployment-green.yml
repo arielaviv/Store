@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-green
+  labels:
+    app: nodejs
+    version: green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodejs
+      version: green
+  template:
+    metadata:
+      labels:
+        app: nodejs
+        version: green
+    spec:
+      containers:
+      - name: nodejs
+        image: arielaviv/my-node-app:latest
+        ports:
+        - containerPort: 3000
